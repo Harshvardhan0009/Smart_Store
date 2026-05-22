@@ -30,7 +30,7 @@ const Signup = () => {
         <div className="auth-card">
           <div className="auth-header">
             <h1 className="auth-logo">🏪 SmartStore AI</h1>
-            <p className="auth-subtitle">Create your account to get started</p>
+            <p className="auth-subtitle">Create a customer account to start shopping</p>
           </div>
 
           {error && <div className="error-message">{error}</div>}
@@ -88,6 +88,8 @@ const Signup = () => {
 
           <div className="auth-link">
             Already have an account? <Link to="/login">Sign in</Link>
+            <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>·</span>
+            <Link to="/admin/signup" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Admin? Register here</Link>
           </div>
         </div>
       </div>

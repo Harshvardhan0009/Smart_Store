@@ -20,6 +20,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
 
 // Health check
 app.get('/', (req, res) => {

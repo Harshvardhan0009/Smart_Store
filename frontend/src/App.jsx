@@ -1,25 +1,46 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { isAuthenticated } from './services/auth';
+import { isAuthenticated, isAdmin, isUser } from './services/auth';
+
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AdminSignup from './pages/AdminSignup';
+
+// Admin pages
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import AIContent from './pages/AIContent';
+import AdminOrders from './pages/AdminOrders';
+
+// User pages
+import UserDashboard from './pages/UserDashboard';
+import Shop from './pages/Shop';
+import MyOrders from './pages/MyOrders';
+
 import './index.css';
 
-// Protected Route wrapper
+// Any logged-in user
 const ProtectedRoute = ({ children }) => {
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
   return children;
 };
 
-// Public Route wrapper (redirect to dashboard if logged in)
+// Admin only
+const AdminRoute = ({ children }) => {
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  if (!isAdmin()) return <Navigate to="/" replace />;
+  return children;
+};
+
+// User (customer) only
+const UserRoute = ({ children }) => {
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  if (!isUser()) return <Navigate to="/" replace />;
+  return children;
+};
+
+// Public route (redirect away if already logged in)
 const PublicRoute = ({ children }) => {
-  if (isAuthenticated()) {
-    return <Navigate to="/" replace />;
-  }
+  if (isAuthenticated()) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -27,51 +48,26 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicRoute>
-              <Signup />
-            </PublicRoute>
-          }
-        />
+        {/* ── Public routes ── */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+        <Route path="/admin/signup" element={<PublicRoute><AdminSignup /></PublicRoute>} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/products"
-          element={
-            <ProtectedRoute>
-              <Products />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ai-content"
-          element={
-            <ProtectedRoute>
-              <AIContent />
-            </ProtectedRoute>
-          }
-        />
+        {/* ── Admin routes ── */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            {isAdmin() ? <Dashboard /> : <UserDashboard />}
+          </ProtectedRoute>
+        } />
+        <Route path="/products" element={<AdminRoute><Products /></AdminRoute>} />
+        <Route path="/ai-content" element={<AdminRoute><AIContent /></AdminRoute>} />
+        <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
 
-        {/* Catch all */}
+        {/* ── User (customer) routes ── */}
+        <Route path="/shop" element={<UserRoute><Shop /></UserRoute>} />
+        <Route path="/my-orders" element={<UserRoute><MyOrders /></UserRoute>} />
+
+        {/* ── Catch all ── */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

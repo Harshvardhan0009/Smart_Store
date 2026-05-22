@@ -8,12 +8,22 @@ const generateToken = (id) => {
   });
 };
 
-// @desc    Register a new user
+// @desc    Register a new user (role: 'user' by default)
 // @route   POST /api/auth/signup
 // @access  Public
 const signup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, adminKey } = req.body;
+
+    // Determine role — admin only if correct secret key is provided
+    let role = 'user';
+    if (adminKey) {
+      if (adminKey === process.env.ADMIN_SECRET_KEY) {
+        role = 'admin';
+      } else {
+        return res.status(403).json({ message: 'Invalid admin secret key.' });
+      }
+    }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -22,7 +32,7 @@ const signup = async (req, res) => {
     }
 
     // Create user
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ name, email, password, role });
 
     if (user) {
       res.status(201).json({
@@ -48,7 +58,6 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {

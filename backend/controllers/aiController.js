@@ -11,8 +11,9 @@ const {
 // @access  Private
 const generateDescription = async (req, res) => {
   try {
-    const prompt = buildDescriptionPrompt(req.body);
-    const description = await generateWithAI(prompt);
+    const product = req.body;
+    const prompt = buildDescriptionPrompt(product);
+    const description = await generateWithAI(prompt, product);
     res.json({ description });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -24,8 +25,9 @@ const generateDescription = async (req, res) => {
 // @access  Private
 const generateTags = async (req, res) => {
   try {
-    const prompt = buildTagsPrompt(req.body);
-    const result = await generateWithAI(prompt);
+    const product = req.body;
+    const prompt = buildTagsPrompt(product);
+    const result = await generateWithAI(prompt, product);
     let tags;
     try {
       tags = JSON.parse(result);
@@ -43,8 +45,9 @@ const generateTags = async (req, res) => {
 // @access  Private
 const generateCaption = async (req, res) => {
   try {
-    const prompt = buildCaptionPrompt(req.body);
-    const caption = await generateWithAI(prompt);
+    const product = req.body;
+    const prompt = buildCaptionPrompt(product);
+    const caption = await generateWithAI(prompt, product);
     res.json({ caption });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -56,8 +59,9 @@ const generateCaption = async (req, res) => {
 // @access  Private
 const generateSuggestions = async (req, res) => {
   try {
-    const prompt = buildSuggestionsPrompt(req.body);
-    const result = await generateWithAI(prompt);
+    const product = req.body;
+    const prompt = buildSuggestionsPrompt(product);
+    const result = await generateWithAI(prompt, product);
     let suggestions;
     try {
       suggestions = JSON.parse(result);
