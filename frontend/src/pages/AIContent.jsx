@@ -69,6 +69,17 @@ const AIContent = () => {
   const downloadPDF = () => {
     if (!selectedProduct) return;
 
+    const stripEmojis = (text) => {
+      if (typeof text !== 'string') return text;
+      let cleaned = text;
+      try {
+        cleaned = text.replace(/\p{Emoji_Presentation}|\p{Emoji}\uFE0F/gu, '');
+      } catch (e) {
+        cleaned = text.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDC00-\uDFFF]/g, '');
+      }
+      return cleaned.replace(/[ \t]+/g, ' ').trim();
+    };
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -86,7 +97,7 @@ const AIContent = () => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184); // slate-400
-        doc.text(`SmartStore AI - Product AI Report: ${selectedProduct.name}`, margin, 10);
+        doc.text(`SmartStore AI - Product AI Report: ${stripEmojis(selectedProduct.name)}`, margin, 10);
         doc.setDrawColor(226, 232, 240); // slate-200
         doc.line(margin, 11, pageWidth - margin, 11);
         y = 18;
@@ -94,7 +105,7 @@ const AIContent = () => {
     };
 
     // Helper to wrap and print text lines
-    const printWrappedText = (text, fontSize, fontStyle, textColor = [51, 65, 85], lineSpacing = 5.5) => {
+    const printWrappedText = (text, fontSize, fontStyle, textColor = [71, 85, 105], lineSpacing = 5.5) => {
       doc.setFont('helvetica', fontStyle);
       doc.setFontSize(fontSize);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
@@ -121,7 +132,7 @@ const AIContent = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
     doc.setTextColor(15, 23, 42); // slate-900
-    doc.text(selectedProduct.name, margin, y);
+    doc.text(stripEmojis(selectedProduct.name), margin, y);
     y += 10;
 
     doc.setFillColor(248, 250, 252); // slate-50
@@ -139,7 +150,7 @@ const AIContent = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42); // slate-900
-    doc.text(selectedProduct.category || 'N/A', margin + 8, y + 13);
+    doc.text(stripEmojis(selectedProduct.category) || 'N/A', margin + 8, y + 13);
     doc.text(`INR ${selectedProduct.price?.toLocaleString('en-IN') || '0'}.00`, margin + 55, y + 13);
     doc.text(`${selectedProduct.stock || '0'} units`, margin + 105, y + 13);
     doc.text(new Date().toLocaleDateString(), margin + 148, y + 13);
@@ -148,18 +159,23 @@ const AIContent = () => {
     // --- SECTIONS ---
 
     // 1. Description Section
-    const descText = results.description || selectedProduct.description || 'No description available.';
+    const descText = stripEmojis(results.description || selectedProduct.description || 'No description available.');
     checkPageOverflow(15);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(79, 70, 229);
-    doc.text('📝 Product Description', margin, y);
+    doc.setTextColor(15, 23, 42); // slate-900
+    
+    // Draw Indigo accent block
+    doc.setFillColor(99, 102, 241);
+    doc.rect(margin, y - 3.5, 3.5, 4.5, 'F');
+    doc.text('Product Description', margin + 6, y);
+    
     y += 5;
-    doc.setDrawColor(224, 231, 255);
+    doc.setDrawColor(226, 232, 240);
     doc.line(margin, y, margin + 45, y);
     y += 6;
 
-    printWrappedText(descText, 10, 'normal', [51, 65, 85], 5.5);
+    printWrappedText(descText, 10, 'normal', [71, 85, 105], 5.5);
     y += 10;
 
     // 2. SEO Tags
@@ -167,14 +183,19 @@ const AIContent = () => {
       checkPageOverflow(20);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.setTextColor(79, 70, 229);
-      doc.text('🏷️ SEO Search Tags', margin, y);
+      doc.setTextColor(15, 23, 42);
+      
+      // Draw Purple accent block
+      doc.setFillColor(139, 92, 246);
+      doc.rect(margin, y - 3.5, 3.5, 4.5, 'F');
+      doc.text('SEO Search Tags', margin + 6, y);
+      
       y += 5;
-      doc.setDrawColor(224, 231, 255);
+      doc.setDrawColor(226, 232, 240);
       doc.line(margin, y, margin + 40, y);
       y += 6;
 
-      const tagsStr = results.tags.map(t => `#${t}`).join('   ');
+      const tagsStr = results.tags.map(t => `#${stripEmojis(t)}`).join('   ');
       printWrappedText(tagsStr, 9.5, 'normal', [109, 40, 217], 5);
       y += 10;
     }
@@ -184,19 +205,25 @@ const AIContent = () => {
       checkPageOverflow(25);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.setTextColor(79, 70, 229);
-      doc.text('📣 Marketing & Social Copy', margin, y);
+      doc.setTextColor(15, 23, 42);
+      
+      // Draw Pink accent block
+      doc.setFillColor(236, 72, 153);
+      doc.rect(margin, y - 3.5, 3.5, 4.5, 'F');
+      doc.text('Marketing & Social Copy', margin + 6, y);
+      
       y += 5;
-      doc.setDrawColor(224, 231, 255);
+      doc.setDrawColor(226, 232, 240);
       doc.line(margin, y, margin + 52, y);
       y += 6;
 
-      const captionLines = doc.splitTextToSize(results.caption, contentWidth - 12);
+      const cleanedCaption = stripEmojis(results.caption);
+      const captionLines = doc.splitTextToSize(cleanedCaption, contentWidth - 12);
       const boxHeight = (captionLines.length * 5.5) + 8;
       checkPageOverflow(boxHeight + 8);
 
-      doc.setFillColor(245, 243, 255);
-      doc.setDrawColor(139, 92, 246);
+      doc.setFillColor(245, 243, 255); // purple-50
+      doc.setDrawColor(139, 92, 246); // purple-500
       doc.rect(margin, y, contentWidth, boxHeight, 'F');
       
       doc.setFillColor(139, 92, 246);
@@ -218,18 +245,23 @@ const AIContent = () => {
       checkPageOverflow(25);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.setTextColor(79, 70, 229);
-      doc.text('🤖 Strategic Retail Insights', margin, y);
+      doc.setTextColor(15, 23, 42);
+      
+      // Draw Emerald accent block
+      doc.setFillColor(16, 185, 129);
+      doc.rect(margin, y - 3.5, 3.5, 4.5, 'F');
+      doc.text('Strategic Retail Insights', margin + 6, y);
+      
       y += 5;
-      doc.setDrawColor(224, 231, 255);
+      doc.setDrawColor(226, 232, 240);
       doc.line(margin, y, margin + 52, y);
       y += 6;
 
       if (typeof results.suggestions === 'object') {
         Object.entries(results.suggestions).forEach(([key, value]) => {
-          const keyText = key.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
-          const bulletTitle = `•  ${keyText}: `;
-          const valueLines = doc.splitTextToSize(value, contentWidth - 12);
+          const keyText = stripEmojis(key.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
+          const bulletTitle = `*  ${keyText}: `;
+          const valueLines = doc.splitTextToSize(stripEmojis(value), contentWidth - 12);
           
           checkPageOverflow((valueLines.length * 5.5) + 6);
           
@@ -253,7 +285,7 @@ const AIContent = () => {
           y += 2.5;
         });
       } else {
-        printWrappedText(results.suggestions, 9.5, 'normal', [71, 85, 105], 5.5);
+        printWrappedText(stripEmojis(results.suggestions), 9.5, 'normal', [71, 85, 105], 5.5);
       }
       y += 10;
     }
