@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
@@ -63,6 +64,216 @@ const AIContent = () => {
       handleGenerate('caption'),
       handleGenerate('suggestions'),
     ]);
+  };
+
+  const downloadPDF = () => {
+    if (!selectedProduct) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 15;
+
+    // Helper to check for page overflow
+    const checkPageOverflow = (neededHeight) => {
+      if (y + neededHeight > pageHeight - margin - 15) {
+        doc.addPage();
+        y = 15;
+        
+        // Print running header on secondary pages
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text(`SmartStore AI - Product AI Report: ${selectedProduct.name}`, margin, 10);
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.line(margin, 11, pageWidth - margin, 11);
+        y = 18;
+      }
+    };
+
+    // Helper to wrap and print text lines
+    const printWrappedText = (text, fontSize, fontStyle, textColor = [51, 65, 85], lineSpacing = 5.5) => {
+      doc.setFont('helvetica', fontStyle);
+      doc.setFontSize(fontSize);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      lines.forEach(line => {
+        checkPageOverflow(lineSpacing);
+        doc.text(line, margin, y);
+        y += lineSpacing;
+      });
+    };
+
+    // --- PAGE 1: BRANDING HEADER ---
+    doc.setFillColor(99, 102, 241); // indigo-500
+    doc.rect(margin, y, contentWidth, 3, 'F');
+    y += 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text('SMARTSTORE AI  •  PRODUCT INTELLIGENCE REPORT', margin, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text(selectedProduct.name, margin, y);
+    y += 10;
+
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.roundedRect(margin, y, contentWidth, 20, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text('CATEGORY', margin + 8, y + 7);
+    doc.text('BASE PRICE', margin + 55, y + 7);
+    doc.text('STOCK LEVEL', margin + 105, y + 7);
+    doc.text('GENERATED ON', margin + 148, y + 7);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text(selectedProduct.category || 'N/A', margin + 8, y + 13);
+    doc.text(`INR ${selectedProduct.price?.toLocaleString('en-IN') || '0'}.00`, margin + 55, y + 13);
+    doc.text(`${selectedProduct.stock || '0'} units`, margin + 105, y + 13);
+    doc.text(new Date().toLocaleDateString(), margin + 148, y + 13);
+    y += 28;
+
+    // --- SECTIONS ---
+
+    // 1. Description Section
+    const descText = results.description || selectedProduct.description || 'No description available.';
+    checkPageOverflow(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(79, 70, 229);
+    doc.text('📝 Product Description', margin, y);
+    y += 5;
+    doc.setDrawColor(224, 231, 255);
+    doc.line(margin, y, margin + 45, y);
+    y += 6;
+
+    printWrappedText(descText, 10, 'normal', [51, 65, 85], 5.5);
+    y += 10;
+
+    // 2. SEO Tags
+    if (results.tags && results.tags.length > 0) {
+      checkPageOverflow(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text('🏷️ SEO Search Tags', margin, y);
+      y += 5;
+      doc.setDrawColor(224, 231, 255);
+      doc.line(margin, y, margin + 40, y);
+      y += 6;
+
+      const tagsStr = results.tags.map(t => `#${t}`).join('   ');
+      printWrappedText(tagsStr, 9.5, 'normal', [109, 40, 217], 5);
+      y += 10;
+    }
+
+    // 3. Marketing Caption Block
+    if (results.caption) {
+      checkPageOverflow(25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text('📣 Marketing & Social Copy', margin, y);
+      y += 5;
+      doc.setDrawColor(224, 231, 255);
+      doc.line(margin, y, margin + 52, y);
+      y += 6;
+
+      const captionLines = doc.splitTextToSize(results.caption, contentWidth - 12);
+      const boxHeight = (captionLines.length * 5.5) + 8;
+      checkPageOverflow(boxHeight + 8);
+
+      doc.setFillColor(245, 243, 255);
+      doc.setDrawColor(139, 92, 246);
+      doc.rect(margin, y, contentWidth, boxHeight, 'F');
+      
+      doc.setFillColor(139, 92, 246);
+      doc.rect(margin, y, 2.5, boxHeight, 'F');
+
+      let innerY = y + 5.5;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9.5);
+      doc.setTextColor(91, 33, 182);
+      captionLines.forEach(line => {
+        doc.text(line, margin + 6, innerY);
+        innerY += 5.5;
+      });
+      y += boxHeight + 10;
+    }
+
+    // 4. Suggestions
+    if (results.suggestions) {
+      checkPageOverflow(25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text('🤖 Strategic Retail Insights', margin, y);
+      y += 5;
+      doc.setDrawColor(224, 231, 255);
+      doc.line(margin, y, margin + 52, y);
+      y += 6;
+
+      if (typeof results.suggestions === 'object') {
+        Object.entries(results.suggestions).forEach(([key, value]) => {
+          const keyText = key.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
+          const bulletTitle = `•  ${keyText}: `;
+          const valueLines = doc.splitTextToSize(value, contentWidth - 12);
+          
+          checkPageOverflow((valueLines.length * 5.5) + 6);
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          doc.setTextColor(15, 23, 42);
+          doc.text(bulletTitle, margin, y);
+          
+          const titleWidth = doc.getTextWidth(bulletTitle);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(71, 85, 105);
+          
+          if (valueLines.length > 0) {
+            doc.text(valueLines[0], margin + titleWidth, y);
+            y += 5.5;
+            for (let i = 1; i < valueLines.length; i++) {
+              doc.text(valueLines[i], margin + titleWidth, y);
+              y += 5.5;
+            }
+          }
+          y += 2.5;
+        });
+      } else {
+        printWrappedText(results.suggestions, 9.5, 'normal', [71, 85, 105], 5.5);
+      }
+      y += 10;
+    }
+
+    // Stamps dynamic page numbers
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('SmartStore AI  •  Confidential Product Intelligence Pack', margin, pageHeight - 8);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - doc.getTextWidth(`Page ${i} of ${pageCount}`), pageHeight - 8);
+      
+      doc.setDrawColor(241, 245, 249);
+      doc.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11);
+    }
+
+    const filename = `${selectedProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_ai_report.pdf`;
+    doc.save(filename);
   };
 
   if (fetchLoading) {
@@ -166,6 +377,14 @@ const AIContent = () => {
                 </button>
                 <button className="btn btn-primary" onClick={handleGenerateAll}>
                   🚀 Generate All
+                </button>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={downloadPDF}
+                  disabled={!selectedProduct || (!results.description && results.tags.length === 0 && !results.caption && !results.suggestions)}
+                  style={{ gap: '0.5rem', display: 'inline-flex', alignItems: 'center' }}
+                >
+                  📥 Download PDF Report
                 </button>
               </div>
 

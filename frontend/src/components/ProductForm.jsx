@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 
 const ProductForm = ({ product, onSubmit, onCancel, onGenerateAI }) => {
   const [formData, setFormData] = useState({
@@ -68,6 +69,163 @@ const ProductForm = ({ product, onSubmit, onCancel, onGenerateAI }) => {
       console.error('AI generation error:', err);
     }
     setLoading((prev) => ({ ...prev, [type]: false }));
+  };
+
+  const downloadProductPDF = () => {
+    if (!formData.name) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 15;
+
+    const checkPageOverflow = (neededHeight) => {
+      if (y + neededHeight > pageHeight - margin - 15) {
+        doc.addPage();
+        y = 15;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`SmartStore AI - Product AI Preview: ${formData.name}`, margin, 10);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, 11, pageWidth - margin, 11);
+        y = 18;
+      }
+    };
+
+    const printWrappedText = (text, fontSize, fontStyle, textColor = [51, 65, 85], lineSpacing = 5.5) => {
+      doc.setFont('helvetica', fontStyle);
+      doc.setFontSize(fontSize);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      const lines = doc.splitTextToSize(text, contentWidth);
+      lines.forEach(line => {
+        checkPageOverflow(lineSpacing);
+        doc.text(line, margin, y);
+        y += lineSpacing;
+      });
+    };
+
+    // --- HEADER ---
+    doc.setFillColor(99, 102, 241);
+    doc.rect(margin, y, contentWidth, 3, 'F');
+    y += 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('SMARTSTORE AI  •  PRODUCT LISTING PREVIEW SHEET', margin, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42);
+    doc.text(formData.name, margin, y);
+    y += 10;
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, contentWidth, 20, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('CATEGORY', margin + 8, y + 7);
+    doc.text('EST. PRICE', margin + 55, y + 7);
+    doc.text('STOCK LEVEL', margin + 105, y + 7);
+    doc.text('GENERATED ON', margin + 148, y + 7);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text(formData.category || 'N/A', margin + 8, y + 13);
+    doc.text(`INR ${Number(formData.price || 0).toLocaleString('en-IN')}.00`, margin + 55, y + 13);
+    doc.text(`${formData.stock || '0'} units`, margin + 105, y + 13);
+    doc.text(new Date().toLocaleDateString(), margin + 148, y + 13);
+    y += 28;
+
+    // --- SECTIONS ---
+    const descText = formData.description || 'No description available.';
+    checkPageOverflow(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(79, 70, 229);
+    doc.text('📝 Product Description', margin, y);
+    y += 5;
+    doc.setDrawColor(224, 231, 255);
+    doc.line(margin, y, margin + 45, y);
+    y += 6;
+
+    printWrappedText(descText, 10, 'normal', [51, 65, 85], 5.5);
+    y += 10;
+
+    if (formData.tags && formData.tags.length > 0) {
+      checkPageOverflow(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text('🏷️ SEO Search Tags', margin, y);
+      y += 5;
+      doc.setDrawColor(224, 231, 255);
+      doc.line(margin, y, margin + 40, y);
+      y += 6;
+
+      const tagsStr = formData.tags.map(t => `#${t}`).join('   ');
+      printWrappedText(tagsStr, 9.5, 'normal', [109, 40, 217], 5);
+      y += 10;
+    }
+
+    if (formData.caption) {
+      checkPageOverflow(25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(79, 70, 229);
+      doc.text('📣 Marketing & Social Copy', margin, y);
+      y += 5;
+      doc.setDrawColor(224, 231, 255);
+      doc.line(margin, y, margin + 52, y);
+      y += 6;
+
+      const captionLines = doc.splitTextToSize(formData.caption, contentWidth - 12);
+      const boxHeight = (captionLines.length * 5.5) + 8;
+      checkPageOverflow(boxHeight + 8);
+
+      doc.setFillColor(245, 243, 255);
+      doc.setDrawColor(139, 92, 246);
+      doc.rect(margin, y, contentWidth, boxHeight, 'F');
+      
+      doc.setFillColor(139, 92, 246);
+      doc.rect(margin, y, 2.5, boxHeight, 'F');
+
+      let innerY = y + 5.5;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9.5);
+      doc.setTextColor(91, 33, 182);
+      captionLines.forEach(line => {
+        doc.text(line, margin + 6, innerY);
+        innerY += 5.5;
+      });
+      y += boxHeight + 10;
+    }
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('SmartStore AI  •  Confidential Product Intelligence Pack', margin, pageHeight - 8);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin - doc.getTextWidth(`Page ${i} of ${pageCount}`), pageHeight - 8);
+      
+      doc.setDrawColor(241, 245, 249);
+      doc.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11);
+    }
+
+    const filename = `${formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_ai_preview.pdf`;
+    doc.save(filename);
   };
 
   const handleSubmit = (e) => {
@@ -220,6 +378,15 @@ const ProductForm = ({ product, onSubmit, onCancel, onGenerateAI }) => {
       </div>
 
       <div className="modal-actions">
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={downloadProductPDF}
+          disabled={!formData.name || (!formData.description && formData.tags.length === 0 && !formData.caption)}
+          style={{ gap: '0.4rem', display: 'inline-flex', alignItems: 'center', marginRight: 'auto', border: '1px solid rgba(99, 102, 241, 0.4)', color: '#a5b4fc', background: 'rgba(99, 102, 241, 0.05)' }}
+        >
+          📥 Download AI PDF
+        </button>
         {onCancel && (
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Cancel
